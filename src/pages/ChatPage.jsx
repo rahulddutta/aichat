@@ -40,9 +40,11 @@ export default function ChatPage({ activeConversationId, onConversationUpdated }
     if (!text || loading) return
 
     // Ensure we have a conversation ID
-    if (!activeConversationId) {
-      const newId = getConversationId()
-      setConversationId(newId)
+    let conversationId = activeConversationId
+
+    if (!conversationId) {
+      conversationId = getConversationId()
+      setConversationId(conversationId)
     }
 
     const userMsg = {
@@ -66,9 +68,9 @@ export default function ChatPage({ activeConversationId, onConversationUpdated }
 
       setMessages((prev) => [...prev, assistantMsg])
 
-      // Notify parent that conversation was updated
+      // Notify parent that conversation was updated and sync active conversation state
       if (onConversationUpdated) {
-        onConversationUpdated()
+        onConversationUpdated(conversationId)
       }
     } catch (err) {
       console.error(err)

@@ -26,6 +26,7 @@ export default function Sidebar({
   drawerOpen,
   onDrawerClose,
   isDrawerMode,
+  refreshKey,
 }) {
   const [conversations, setConversations] = useState([])
   const [loading, setLoading] = useState(false)
@@ -34,7 +35,7 @@ export default function Sidebar({
 
   useEffect(() => {
     loadConversations()
-  }, [])
+  }, [refreshKey])
 
   async function loadConversations() {
     setLoading(true)

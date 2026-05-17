@@ -66,6 +66,14 @@ function App() {
     setSidebarRefresh((prev) => prev + 1)
   }
 
+  const handleConversationUpdated = (conversationId) => {
+    if (conversationId) {
+      setActiveConversationId(conversationId)
+      localStorage.setItem('activeConversationId', conversationId)
+    }
+    setSidebarRefresh((prev) => prev + 1)
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -85,6 +93,7 @@ function App() {
             drawerOpen={true}
             onDrawerClose={() => {}}
             isDrawerMode={false}
+            refreshKey={sidebarRefresh}
           />
         )}
 
@@ -97,6 +106,7 @@ function App() {
             drawerOpen={drawerOpen}
             onDrawerClose={() => setDrawerOpen(false)}
             isDrawerMode={true}
+            refreshKey={sidebarRefresh}
           />
         )}
 
@@ -136,7 +146,7 @@ function App() {
           <ChatPage
             key={activeConversationId}
             activeConversationId={activeConversationId}
-            onConversationUpdated={() => setSidebarRefresh((prev) => prev + 1)}
+            onConversationUpdated={handleConversationUpdated}
           />
         </Box>
       </Box>
