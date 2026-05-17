@@ -50,9 +50,9 @@ export default function MessageList({ messages }) {
           }}
         >
           <Box>
-            <Box sx={{ fontSize: '3rem', mb: 1 }}>💬</Box>
+            <Box sx={{ fontSize: '3rem', mb: 1 }}>👋</Box>
             <Box sx={{ fontSize: '1rem', fontWeight: 500 }}>
-              No messages yet. Start a conversation!
+              Ask me about employees, React, AI, etc.
             </Box>
           </Box>
         </Box>

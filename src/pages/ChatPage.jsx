@@ -1,17 +1,49 @@
-import { useState } from 'react'
-import { Box, Container, Paper } from '@mui/material'
+import { useEffect, useState } from 'react'
+import { Box, Container, Paper, useMediaQuery, useTheme } from '@mui/material'
 import Header from '../components/Header'
 import MessageList from '../components/MessageList'
 import ChatInput from '../components/ChatInput'
 import TypingIndicator from '../components/TypingIndicator'
-import { askQuestion } from '../services/api'
+import {
+  askQuestion,
+  loadConversation,
+  setConversationId,
+  getConversationId,
+} from '../services/api'
 
-export default function ChatPage() {
+export default function ChatPage({ activeConversationId, onConversationUpdated }) {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
+  // Load conversation when active conversation changes
+  useEffect(() => {
+    async function fetchConversation() {
+      if (!activeConversationId) return
+
+      setConversationId(activeConversationId)
+
+      try {
+        const data = await loadConversation(activeConversationId)
+        setMessages(data.messages || [])
+      } catch (error) {
+        // New conversation - start with empty messages
+        setMessages([])
+      }
+    }
+
+    fetchConversation()
+  }, [activeConversationId])
 
   async function handleSend(text) {
     if (!text || loading) return
+
+    // Ensure we have a conversation ID
+    if (!activeConversationId) {
+      const newId = getConversationId()
+      setConversationId(newId)
+    }
 
     const userMsg = {
       role: 'user',
@@ -25,19 +57,29 @@ export default function ChatPage() {
 
     try {
       const data = await askQuestion(updatedMessages)
+
       const assistantMsg = {
         role: 'assistant',
         content: data?.answer ?? 'No response',
         timestamp: Date.now(),
       }
+
       setMessages((prev) => [...prev, assistantMsg])
+
+      // Notify parent that conversation was updated
+      if (onConversationUpdated) {
+        onConversationUpdated()
+      }
     } catch (err) {
       console.error(err)
+
       const errorMsg = {
         role: 'assistant',
-        content: 'Sorry, I encountered an error processing your request. Please try again.',
+        content:
+          'Sorry, I encountered an error processing your request. Please try again.',
         timestamp: Date.now(),
       }
+
       setMessages((prev) => [...prev, errorMsg])
     } finally {
       setLoading(false)
@@ -47,11 +89,12 @@ export default function ChatPage() {
   return (
     <Box
       sx={{
-        minHeight: '100vh',
+        flex: 1,
+        height: '100%',
         bgcolor: '#f8fafc',
         display: 'flex',
         flexDirection: 'column',
-        py: { xs: 0, sm: 2 },
+        overflow: 'hidden',
       }}
     >
       <Container
@@ -61,6 +104,8 @@ export default function ChatPage() {
           display: 'flex',
           flexDirection: 'column',
           px: { xs: 0, sm: 2 },
+          py: { xs: 0, sm: 2 },
+          height: '100%',
         }}
       >
         <Paper
@@ -68,7 +113,7 @@ export default function ChatPage() {
           sx={{
             display: 'flex',
             flexDirection: 'column',
-            height: { xs: '100vh', sm: '85vh' },
+            height: '100%',
             borderRadius: { xs: 0, sm: 2 },
             overflow: 'hidden',
             boxShadow: {
@@ -76,13 +121,22 @@ export default function ChatPage() {
               sm: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
             },
             bgcolor: 'white',
+            mt: isMobile ? 5 : 0,
           }}
         >
           {/* Header */}
           <Header />
 
           {/* Messages Area */}
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
             <MessageList messages={messages} />
 
             {/* Typing Indicator */}
@@ -123,6 +177,7 @@ export default function ChatPage() {
                       🤖
                     </Box>
                   </Box>
+
                   <Box
                     sx={{
                       p: 1.5,
@@ -139,7 +194,10 @@ export default function ChatPage() {
           </Box>
 
           {/* Input Area */}
-          <ChatInput onSend={handleSend} loading={loading} />
+          <ChatInput
+            onSend={handleSend}
+            loading={loading}
+          />
         </Paper>
       </Container>
     </Box>

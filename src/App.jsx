@@ -1,5 +1,8 @@
-import { ThemeProvider, createTheme, CssBaseline } from '@mui/material'
+import { useState, useEffect } from 'react'
+import { ThemeProvider, createTheme, CssBaseline, useMediaQuery, Box, IconButton } from '@mui/material'
+import MenuIcon from '@mui/icons-material/Menu'
 import ChatPage from './pages/ChatPage'
+import Sidebar from './components/Sidebar'
 
 const theme = createTheme({
   palette: {
@@ -38,10 +41,105 @@ const theme = createTheme({
 })
 
 function App() {
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [activeConversationId, setActiveConversationId] = useState(null)
+  const [sidebarRefresh, setSidebarRefresh] = useState(0)
+
+  useEffect(() => {
+    // Load active conversation from localStorage
+    const saved = localStorage.getItem('activeConversationId')
+    if (saved) {
+      setActiveConversationId(saved)
+    }
+  }, [])
+
+  const handleConversationSelect = (conversationId) => {
+    setActiveConversationId(conversationId)
+    localStorage.setItem('activeConversationId', conversationId)
+  }
+
+  const handleNewChat = () => {
+    const newId = crypto.randomUUID()
+    setActiveConversationId(newId)
+    localStorage.setItem('activeConversationId', newId)
+    setSidebarRefresh((prev) => prev + 1)
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <ChatPage />
+      <Box
+        sx={{
+          display: 'flex',
+          height: '100vh',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Desktop Sidebar */}
+        {!isMobile && (
+          <Sidebar
+            activeConversationId={activeConversationId}
+            onConversationSelect={handleConversationSelect}
+            onNewChat={handleNewChat}
+            drawerOpen={true}
+            onDrawerClose={() => {}}
+            isDrawerMode={false}
+          />
+        )}
+
+        {/* Mobile Drawer Sidebar */}
+        {isMobile && (
+          <Sidebar
+            activeConversationId={activeConversationId}
+            onConversationSelect={handleConversationSelect}
+            onNewChat={handleNewChat}
+            drawerOpen={drawerOpen}
+            onDrawerClose={() => setDrawerOpen(false)}
+            isDrawerMode={true}
+          />
+        )}
+
+        {/* Main Chat Area */}
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+          }}
+        >
+          {/* Mobile Menu Button */}
+          {isMobile && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 10,
+                left: 10,
+                zIndex: 1000,
+              }}
+            >
+              <IconButton
+                onClick={() => setDrawerOpen(true)}
+                sx={{
+                  bgcolor: 'rgba(14, 165, 233, 0.1)',
+                  '&:hover': {
+                    bgcolor: 'rgba(14, 165, 233, 0.2)',
+                  },
+                }}
+              >
+                <MenuIcon />
+              </IconButton>
+            </Box>
+          )}
+
+          <ChatPage
+            key={activeConversationId}
+            activeConversationId={activeConversationId}
+            onConversationUpdated={() => setSidebarRefresh((prev) => prev + 1)}
+          />
+        </Box>
+      </Box>
     </ThemeProvider>
   )
 }
