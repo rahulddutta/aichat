@@ -1,6 +1,6 @@
 import { Box, Typography, IconButton } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
-import MoreVertIcon from '@mui/icons-material/MoreVert'
+import { capitalizeFirstLetter, stripMarkdown } from '../utils/text'
 
 export default function ConversationItem({
   conversation,
@@ -71,7 +71,7 @@ export default function ConversationItem({
             transition: 'color 200ms ease',
           }}
         >
-          {conversation.title || 'Untitled conversation'}
+          {capitalizeFirstLetter(conversation.title) || 'Untitled conversation'}
         </Typography>
 
         {conversation.lastMessage && (
@@ -85,7 +85,7 @@ export default function ConversationItem({
               mt: 0.5,
             }}
           >
-            {conversation.lastMessage}
+            {stripMarkdown(conversation.lastMessage)}
           </Typography>
         )}
 
