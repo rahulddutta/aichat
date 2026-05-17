@@ -11,11 +11,11 @@ import {
   getConversationId,
 } from '../services/api'
 
-export default function ChatPage({ activeConversationId, onConversationUpdated }) {
+export default function ChatPage({ activeConversationId, onConversationUpdated, isMobile, onOpenDrawer }) {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'))
 
   // Load conversation when active conversation changes
   useEffect(() => {
@@ -123,11 +123,11 @@ export default function ChatPage({ activeConversationId, onConversationUpdated }
               sm: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
             },
             bgcolor: 'white',
-            mt: isMobile ? 5 : 0,
+            mt: 0,
           }}
         >
           {/* Header */}
-          <Header />
+          <Header isMobile={isMobile || isSmallScreen} onMenuClick={onOpenDrawer} />
 
           {/* Messages Area */}
           <Box

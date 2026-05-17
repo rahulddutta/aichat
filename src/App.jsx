@@ -119,34 +119,12 @@ function App() {
             position: 'relative',
           }}
         >
-          {/* Mobile Menu Button */}
-          {isMobile && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 10,
-                left: 10,
-                zIndex: 1000,
-              }}
-            >
-              <IconButton
-                onClick={() => setDrawerOpen(true)}
-                sx={{
-                  bgcolor: 'rgba(14, 165, 233, 0.1)',
-                  '&:hover': {
-                    bgcolor: 'rgba(14, 165, 233, 0.2)',
-                  },
-                }}
-              >
-                <MenuIcon />
-              </IconButton>
-            </Box>
-          )}
-
           <ChatPage
             key={activeConversationId}
             activeConversationId={activeConversationId}
             onConversationUpdated={handleConversationUpdated}
+            isMobile={isMobile}
+            onOpenDrawer={() => setDrawerOpen(true)}
           />
         </Box>
       </Box>

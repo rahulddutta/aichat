@@ -1,8 +1,9 @@
 
-import { AppBar, Toolbar, Typography, Box, Avatar } from '@mui/material'
+import { AppBar, Toolbar, Typography, Box, Avatar, IconButton } from '@mui/material'
 import SmartToyIcon from '@mui/icons-material/SmartToy'
+import MenuIcon from '@mui/icons-material/Menu'
 
-export default function Header() {
+export default function Header({ isMobile, onMenuClick }) {
   return (
     <AppBar
       position="static"
@@ -13,6 +14,22 @@ export default function Header() {
       }}
     >
       <Toolbar sx={{ py: 1.5 }}>
+        {isMobile && (
+          <IconButton
+            onClick={onMenuClick}
+            sx={{
+              mr: 1.5,
+              color: 'rgba(255, 255, 255, 0.9)',
+              bgcolor: 'rgba(255, 255, 255, 0.12)',
+              '&:hover': {
+                bgcolor: 'rgba(255, 255, 255, 0.18)',
+              },
+            }}
+          >
+            <MenuIcon />
+          </IconButton>
+        )}
+
         <Avatar
           sx={{
             mr: 1.5,
