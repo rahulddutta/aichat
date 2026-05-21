@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Box, Container, Paper, useMediaQuery, useTheme } from '@mui/material'
+import { useEffect, useState, useRef } from 'react'
+import { Box, Button, Container, Paper, Typography, useMediaQuery, useTheme } from '@mui/material'
 import Header from '../components/Header'
 import MessageList from '../components/MessageList'
 import ChatInput from '../components/ChatInput'
@@ -9,11 +9,15 @@ import {
   loadConversation,
   setConversationId,
   getConversationId,
+  uploadPdf,
 } from '../services/api'
 
 export default function ChatPage({ activeConversationId, onConversationUpdated, isMobile, onOpenDrawer }) {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadMessage, setUploadMessage] = useState('')
+  const fileInputRef = useRef(null)
   const theme = useTheme()
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'))
 
@@ -88,6 +92,41 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
     }
   }
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileSelected = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    setUploadMessage('')
+
+    try {
+      const result = await uploadPdf(file)
+      const successMessage = `Uploaded ${result.chunks} chunks from ${file.name}`
+      setUploadMessage(successMessage)
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `${successMessage}. You can now ask questions about this PDF.`,
+          timestamp: Date.now(),
+        },
+      ])
+    } catch (error) {
+      console.error('PDF upload failed', error)
+      setUploadMessage(
+        'PDF upload failed. Please try again and ensure the server is running.'
+      )
+    } finally {
+      setUploading(false)
+      event.target.value = ''
+    }
+  }
+
   return (
     <Box
       sx={{
@@ -128,6 +167,42 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
         >
           {/* Header */}
           <Header isMobile={isMobile || isSmallScreen} onMenuClick={onOpenDrawer} />
+
+          {/* Upload PDF */}
+          <Box
+            sx={{
+              px: 2,
+              py: 2,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              flexWrap: 'wrap',
+              borderBottom: '1px solid #e2e8f0',
+            }}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf"
+              hidden
+              onChange={handleFileSelected}
+            />
+            <Button
+              variant="outlined"
+              onClick={handleUploadClick}
+              disabled={uploading}
+            >
+              {uploading ? 'Uploading...' : 'Upload PDF'}
+            </Button>
+            {uploadMessage && (
+              <Typography
+                variant="body2"
+                sx={{ color: uploading ? 'text.secondary' : 'success.main' }}
+              >
+                {uploadMessage}
+              </Typography>
+            )}
+          </Box>
 
           {/* Messages Area */}
           <Box

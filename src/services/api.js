@@ -43,6 +43,19 @@ export async function askQuestion(messages) {
   return response.data
 }
 
+export async function uploadPdf(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await api.post('/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+
+  return response.data
+}
+
 // Load conversation by ID
 export async function loadConversation(conversationId = null) {
   const id = conversationId || getConversationId()
