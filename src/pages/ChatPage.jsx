@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
-import { Box, Button, Container, Paper, Typography, useMediaQuery, useTheme } from '@mui/material'
+import { Box, Button, Container, Paper, Typography, useMediaQuery, useTheme, IconButton } from '@mui/material'
+import DeleteIcon from '@mui/icons-material/Delete'
 import Header from '../components/Header'
 import MessageList from '../components/MessageList'
 import ChatInput from '../components/ChatInput'
@@ -10,6 +11,8 @@ import {
   setConversationId,
   getConversationId,
   uploadPdf,
+  getUploadedFiles,
+  deleteUploadedFile,
 } from '../services/api'
 
 export default function ChatPage({ activeConversationId, onConversationUpdated, isMobile, onOpenDrawer }) {
@@ -17,12 +20,36 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadMessage, setUploadMessage] = useState('')
+  const [uploadedFiles, setUploadedFiles] = useState([])
   const fileInputRef = useRef(null)
   const theme = useTheme()
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'))
 
+  const handleDeleteFile = async (filename) => {
+    if (!window.confirm(`Delete ${filename}?`)) return
+    try {
+      await deleteUploadedFile(filename)
+      setUploadedFiles((prev) => prev.filter((f) => f.filename !== filename))
+      setUploadMessage(`Deleted ${filename}`)
+    } catch (e) {
+      console.error('Delete failed', e)
+      setUploadMessage('Failed to delete file')
+    }
+  }
+
   // Load conversation when active conversation changes
   useEffect(() => {
+    async function fetchUploads() {
+      try {
+        const files = await getUploadedFiles()
+        setUploadedFiles(files || [])
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    fetchUploads()
+
     async function fetchConversation() {
       if (!activeConversationId) return
 
@@ -107,6 +134,13 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
       const result = await uploadPdf(file)
       const successMessage = `Uploaded ${result.chunks} chunks from ${file.name}`
       setUploadMessage(successMessage)
+
+      try {
+        const files = await getUploadedFiles()
+        setUploadedFiles(files || [])
+      } catch (e) {
+        // ignore
+      }
 
       setMessages((prev) => [
         ...prev,
@@ -201,6 +235,23 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
               >
                 {uploadMessage}
               </Typography>
+            )}
+            {uploadedFiles && uploadedFiles.length > 0 && (
+              <Box sx={{ width: '100%', mt: 1 }}>
+                <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                  Uploaded files:
+                </Typography>
+                {uploadedFiles.map((f, idx) => (
+                  <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" sx={{ fontSize: '0.9rem', flex: 1 }}>
+                      {f.filename} — {f.chunks} chunks
+                    </Typography>
+                    <IconButton size="small" onClick={() => handleDeleteFile(f.filename)} aria-label={`delete ${f.filename}`}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Box>
             )}
           </Box>
 

@@ -56,6 +56,16 @@ export async function uploadPdf(file) {
   return response.data
 }
 
+export async function getUploadedFiles() {
+  const response = await api.get('/upload')
+  return response.data
+}
+
+export async function deleteUploadedFile(filename) {
+  const response = await api.delete(`/upload/${encodeURIComponent(filename)}`)
+  return response.data
+}
+
 // Load conversation by ID
 export async function loadConversation(conversationId = null) {
   const id = conversationId || getConversationId()
