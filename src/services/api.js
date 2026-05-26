@@ -58,6 +58,88 @@ export async function askQuestion(messages) {
   return response.data
 }
 
+export async function askQuestionStream(messages, onChunk) {
+  const conversationId = getConversationId()
+  const session_id = getSessionId()
+
+  try {
+    const response = await fetch('http://localhost:3001/ask/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        conversationId,
+        session_id,
+        messages,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let done = false
+    let buffer = ''
+
+    while (!done) {
+      const { value, done: streamDone } = await reader.read()
+      done = streamDone
+
+      if (value) {
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+
+        for (let i = 0; i < lines.length - 1; i++) {
+          const line = lines[i]
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.substring(6)
+              const data = JSON.parse(jsonStr)
+              
+              if (data.error) {
+                onChunk({ error: data.error })
+              } else if (data.done) {
+                onChunk({
+                  done: true,
+                  conversationId: data.conversationId,
+                  session_id: data.session_id,
+                })
+              } else if (data.chunk) {
+                onChunk({ chunk: data.chunk })
+              }
+            } catch (e) {
+              // Skip parsing errors
+            }
+          }
+        }
+
+        buffer = lines[lines.length - 1]
+      }
+    }
+
+    // Process any remaining buffer
+    if (buffer && buffer.startsWith('data: ')) {
+      try {
+        const jsonStr = buffer.substring(6)
+        const data = JSON.parse(jsonStr)
+        if (data.error) {
+          onChunk({ error: data.error })
+        } else if (data.chunk) {
+          onChunk({ chunk: data.chunk })
+        }
+      } catch (e) {
+        // Skip parsing errors
+      }
+    }
+  } catch (error) {
+    console.error('Stream error:', error)
+    onChunk({ error: error.message })
+  }
+}
+
 export async function uploadPdf(file) {
   const formData = new FormData()
   formData.append('file', file)

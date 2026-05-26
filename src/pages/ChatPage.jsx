@@ -1,12 +1,15 @@
 import { useEffect, useState, useRef } from 'react'
-import { Box, Button, Container, Paper, Typography, useMediaQuery, useTheme, IconButton } from '@mui/material'
+import { Box, Button, Container, Paper, Typography, useMediaQuery, useTheme, IconButton, Alert, Chip, LinearProgress } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
+import DescriptionIcon from '@mui/icons-material/Description'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import ErrorIcon from '@mui/icons-material/Error'
 import Header from '../components/Header'
 import MessageList from '../components/MessageList'
 import ChatInput from '../components/ChatInput'
 import TypingIndicator from '../components/TypingIndicator'
 import {
-  askQuestion,
+  askQuestionStream,
   loadConversation,
   setConversationId,
   getConversationId,
@@ -20,6 +23,7 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadMessage, setUploadMessage] = useState('')
+  const [uploadError, setUploadError] = useState('')
   const [uploadedFiles, setUploadedFiles] = useState([])
   const fileInputRef = useRef(null)
   const theme = useTheme()
@@ -31,9 +35,12 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
       await deleteUploadedFile(filename)
       setUploadedFiles((prev) => prev.filter((f) => f.filename !== filename))
       setUploadMessage(`Deleted ${filename}`)
+      setUploadError('')
+      setTimeout(() => setUploadMessage(''), 3000)
     } catch (e) {
       console.error('Delete failed', e)
-      setUploadMessage('Failed to delete file')
+      setUploadError('Failed to delete file')
+      setUploadMessage('')
     }
   }
 
@@ -89,20 +96,66 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
     setLoading(true)
 
     try {
-      const data = await askQuestion(updatedMessages)
+      let fullAnswer = ''
+      let messageAdded = false
 
-      const assistantMsg = {
-        role: 'assistant',
-        content: data?.answer ?? 'No response',
-        timestamp: Date.now(),
-      }
-
-      setMessages((prev) => [...prev, assistantMsg])
-
-      // Notify parent that conversation was updated and sync active conversation state
-      if (onConversationUpdated) {
-        onConversationUpdated(conversationId)
-      }
+      await askQuestionStream(updatedMessages, (data) => {
+        if (data.error) {
+          console.error('Stream error:', data.error)
+          
+          // If we haven't added the message yet, add it with error
+          if (!messageAdded) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: `Error: ${data.error}`,
+                timestamp: Date.now(),
+              },
+            ])
+            messageAdded = true
+          } else {
+            // Update existing message with error
+            setMessages((prev) => {
+              const updated = [...prev]
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: `Error: ${data.error}`,
+              }
+              return updated
+            })
+          }
+        } else if (data.chunk) {
+          fullAnswer += data.chunk
+          
+          if (!messageAdded) {
+            // First chunk - add message to state
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: fullAnswer,
+                timestamp: Date.now(),
+              },
+            ])
+            messageAdded = true
+          } else {
+            // Subsequent chunks - update existing message
+            setMessages((prev) => {
+              const updated = [...prev]
+              updated[updated.length - 1] = {
+                ...updated[updated.length - 1],
+                content: fullAnswer,
+              }
+              return updated
+            })
+          }
+        } else if (data.done) {
+          if (onConversationUpdated) {
+            onConversationUpdated(conversationId)
+          }
+        }
+      })
     } catch (err) {
       console.error(err)
 
@@ -129,11 +182,13 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
 
     setUploading(true)
     setUploadMessage('')
+    setUploadError('')
 
     try {
       const result = await uploadPdf(file)
-      const successMessage = `Uploaded ${result.chunks} chunks from ${file.name}`
+      const successMessage = `✓ Uploaded ${result.chunks} chunks from ${file.name}`
       setUploadMessage(successMessage)
+      setUploadError('')
 
       try {
         const files = await getUploadedFiles()
@@ -146,15 +201,18 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
         ...prev,
         {
           role: 'assistant',
-          content: `${successMessage}. You can now ask questions about this PDF.`,
+          content: `Successfully uploaded "${file.name}" with ${result.chunks} chunks. You can now ask questions about this PDF.`,
           timestamp: Date.now(),
         },
       ])
+
+      // Clear success message after 4 seconds
+      setTimeout(() => setUploadMessage(''), 4000)
     } catch (error) {
       console.error('PDF upload failed', error)
-      setUploadMessage(
-        'PDF upload failed. Please try again and ensure the server is running.'
-      )
+      const errorMsg = 'PDF upload failed. Please try again and ensure the server is running.'
+      setUploadError(errorMsg)
+      setUploadMessage('')
     } finally {
       setUploading(false)
       event.target.value = ''
@@ -207,11 +265,8 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
             sx={{
               px: 2,
               py: 2,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 2,
-              flexWrap: 'wrap',
               borderBottom: '1px solid #e2e8f0',
+              bgcolor: '#fafafa',
             }}
           >
             <input
@@ -221,36 +276,76 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
               hidden
               onChange={handleFileSelected}
             />
-            <Button
-              variant="outlined"
-              onClick={handleUploadClick}
-              disabled={uploading}
-            >
-              {uploading ? 'Uploading...' : 'Upload PDF'}
-            </Button>
+
+            {/* Upload Button and Progress */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: uploadMessage || uploadError || (uploadedFiles && uploadedFiles.length > 0) ? 2 : 0 }}>
+              <Button
+                variant="contained"
+                onClick={handleUploadClick}
+                disabled={uploading}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  transition: 'all 200ms ease',
+                }}
+              >
+                {uploading ? 'Uploading...' : 'Upload PDF'}
+              </Button>
+              {uploading && (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Processing file...
+                </Typography>
+              )}
+            </Box>
+
+            {uploading && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
+
+            {/* Success Message */}
             {uploadMessage && (
-              <Typography
-                variant="body2"
-                sx={{ color: uploading ? 'text.secondary' : 'success.main' }}
+              <Alert
+                icon={<CheckCircleIcon fontSize="inherit" />}
+                severity="success"
+                sx={{ mb: 2, borderRadius: 1 }}
+                onClose={() => setUploadMessage('')}
               >
                 {uploadMessage}
-              </Typography>
+              </Alert>
             )}
+
+            {/* Error Message */}
+            {uploadError && (
+              <Alert
+                icon={<ErrorIcon fontSize="inherit" />}
+                severity="error"
+                sx={{ mb: 2, borderRadius: 1 }}
+                onClose={() => setUploadError('')}
+              >
+                {uploadError}
+              </Alert>
+            )}
+
+            {/* Uploaded Files */}
             {uploadedFiles && uploadedFiles.length > 0 && (
-              <Box sx={{ width: '100%', mt: 1 }}>
-                <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                  Uploaded files:
+              <Box>
+                <Typography variant="caption" sx={{ display: 'block', mb: 1, fontWeight: 600, color: 'text.secondary' }}>
+                  Uploaded Files ({uploadedFiles.length})
                 </Typography>
-                {uploadedFiles.map((f, idx) => (
-                  <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body2" sx={{ fontSize: '0.9rem', flex: 1 }}>
-                      {f.filename} — {f.chunks} chunks
-                    </Typography>
-                    <IconButton size="small" onClick={() => handleDeleteFile(f.filename)} aria-label={`delete ${f.filename}`}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                ))}
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                  {uploadedFiles.map((f, idx) => (
+                    <Chip
+                      key={idx}
+                      icon={<DescriptionIcon />}
+                      label={`${f.filename} (${f.chunks} chunks)`}
+                      onDelete={() => handleDeleteFile(f.filename)}
+                      variant="outlined"
+                      sx={{
+                        borderColor: '#cbd5e1',
+                        bgcolor: '#ffffff',
+                        fontWeight: 500,
+                      }}
+                    />
+                  ))}
+                </Box>
               </Box>
             )}
           </Box>

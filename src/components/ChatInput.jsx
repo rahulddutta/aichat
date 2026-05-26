@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
-import { Box, TextField, IconButton, Tooltip } from '@mui/material'
+import { Box, TextField, IconButton, Tooltip, CircularProgress } from '@mui/material'
 import SendIcon from '@mui/icons-material/Send'
 
 export default function ChatInput({ onSend, loading }) {
@@ -102,6 +102,7 @@ export default function ChatInput({ onSend, loading }) {
               backgroundColor: 'primary.main',
               color: 'white',
               transition: 'all 200ms ease',
+              position: 'relative',
               '&:hover:not(.Mui-disabled)': {
                 backgroundColor: '#0284c7',
                 boxShadow: '0 4px 12px rgba(14, 165, 233, 0.3)',
@@ -112,7 +113,11 @@ export default function ChatInput({ onSend, loading }) {
               },
             }}
           >
-            <SendIcon sx={{ fontSize: '1.25rem' }} />
+            {loading ? (
+              <CircularProgress size={20} sx={{ color: 'white' }} />
+            ) : (
+              <SendIcon sx={{ fontSize: '1.25rem' }} />
+            )}
           </IconButton>
         </span>
       </Tooltip>
