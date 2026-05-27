@@ -1,4 +1,5 @@
 
+import React, { memo } from 'react'
 import { Box, Paper, Typography, Avatar } from '@mui/material'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -45,6 +46,8 @@ const markdownComponents = {
         borderRadius: inline ? '0.25rem' : undefined,
         fontFamily: '"Monaco", "Courier New", monospace',
         fontSize: inline ? '0.875em' : '0.9em',
+        wordBreak: 'break-word',
+        overflowWrap: 'anywhere',
       }}
     >
       {children}
@@ -58,7 +61,10 @@ const markdownComponents = {
         color: '#e2e8f0',
         p: 1.5,
         borderRadius: 1,
-        overflow: 'auto',
+        width: '100%',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        overflowWrap: 'anywhere',
         mb: 1,
         fontSize: '0.875rem',
         fontFamily: '"Monaco", "Courier New", monospace',
@@ -112,7 +118,7 @@ const markdownComponents = {
   ),
 }
 
-export default function MessageBubble({ message }) {
+function MessageBubble({ message }) {
   const isUser = message.role === 'user'
 
   const formatTime = (timestamp) => {
@@ -173,6 +179,7 @@ export default function MessageBubble({ message }) {
           elevation={0}
           sx={{
             display: 'inline-block',
+            maxWidth: '100%',
             p: 1.5,
             borderRadius: 2,
             bgcolor: isUser ? '#0ea5e9' : '#f1f5f9',
@@ -180,6 +187,8 @@ export default function MessageBubble({ message }) {
             boxShadow: isUser ? '0 4px 12px rgba(14, 165, 233, 0.2)' : 'none',
             border: isUser ? 'none' : '1px solid #e2e8f0',
             transition: 'all 200ms ease',
+            wordBreak: 'break-word',
+            overflowWrap: 'anywhere',
             '&:hover': {
               boxShadow: isUser
                 ? '0 6px 20px rgba(14, 165, 233, 0.25)'
@@ -206,6 +215,8 @@ export default function MessageBubble({ message }) {
                 '& blockquote': { margin: 0 },
                 '& pre': { margin: 0 },
                 '& h1, & h2, & h3, & h4, & h5, & h6': { margin: 0 },
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
               }}
             >
               <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -249,3 +260,5 @@ export default function MessageBubble({ message }) {
     </Box>
   )
 }
+
+export default memo(MessageBubble)

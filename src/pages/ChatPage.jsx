@@ -362,7 +362,7 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
               overflow: 'hidden',
             }}
           >
-            <MessageList messages={messages} />
+            <MessageList messages={messages} isLoading={loading} />
 
             {/* Typing Indicator */}
             {loading && (

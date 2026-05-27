@@ -3,20 +3,30 @@ import { Box, Fab } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MessageBubble from './MessageBubble'
 
-export default function MessageList({ messages }) {
+export default function MessageList({ messages, isLoading }) {
   const containerRef = useRef(null)
   const endRef = useRef(null)
+  const prevLoadingRef = useRef(false)
   const [showScrollButton, setShowScrollButton] = useState(false)
+  const [isNearBottom, setIsNearBottom] = useState(true)
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    const wasLoading = prevLoadingRef.current
+    const finishedStreaming = wasLoading && !isLoading
+
+    if (finishedStreaming && isNearBottom) {
+      endRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+
+    prevLoadingRef.current = isLoading
+  }, [messages, isLoading, isNearBottom])
 
   const handleScroll = () => {
     if (!containerRef.current) return
     const { scrollTop, scrollHeight, clientHeight } = containerRef.current
-    // Show button when user scrolls up more than 100px from bottom
-    setShowScrollButton(scrollHeight - scrollTop - clientHeight > 100)
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+    setShowScrollButton(distanceFromBottom > 100)
+    setIsNearBottom(distanceFromBottom <= 100)
   }
 
   const scrollToBottom = () => {
@@ -35,7 +45,6 @@ export default function MessageList({ messages }) {
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: '#ffffff',
-        scrollBehavior: 'smooth',
         position: 'relative',
         '&::-webkit-scrollbar': {
           width: '8px',
