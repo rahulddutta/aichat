@@ -95,11 +95,13 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
     setMessages(updatedMessages)
     setLoading(true)
 
+    const requestMessages = updatedMessages.slice(-6)
+
     try {
       let fullAnswer = ''
       let messageAdded = false
 
-      await askQuestionStream(updatedMessages, (data) => {
+      await askQuestionStream(requestMessages, (data) => {
         if (data.error) {
           console.error('Stream error:', data.error)
           
@@ -407,9 +409,15 @@ export default function ChatPage({ activeConversationId, onConversationUpdated, 
                       borderRadius: 2,
                       bgcolor: '#f1f5f9',
                       border: '1px solid #e2e8f0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
                     }}
                   >
                     <TypingIndicator />
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                      Thinking...
+                    </Typography>
                   </Box>
                 </Box>
               </Box>

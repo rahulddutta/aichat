@@ -2,6 +2,7 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
+  timeout: 120000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -50,12 +51,20 @@ export async function getConversations() {
 export async function askQuestion(messages) {
   const conversationId = getConversationId()
   const session_id = getSessionId()
-  const response = await api.post('/ask', {
-    conversationId,
-    session_id,
-    messages,
-  })
-  return response.data
+  try {
+    const response = await api.post('/ask', {
+      conversationId,
+      session_id,
+      messages,
+    })
+    return response.data
+  } catch (error) {
+    console.error('askQuestion error:', error.message, {
+      response: error.response,
+      request: error.request,
+    })
+    throw error
+  }
 }
 
 export async function askQuestionStream(messages, onChunk) {
@@ -63,7 +72,8 @@ export async function askQuestionStream(messages, onChunk) {
   const session_id = getSessionId()
 
   try {
-    const response = await fetch('http://localhost:3001/ask/stream', {
+    const apiBaseUrl = api.defaults.baseURL || ''
+    const response = await fetch(`${apiBaseUrl.replace(/\/$/, '')}/ask/stream`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -135,7 +145,10 @@ export async function askQuestionStream(messages, onChunk) {
       }
     }
   } catch (error) {
-    console.error('Stream error:', error)
+    console.error('Stream error:', error.message, {
+      response: error.response,
+      request: error.request,
+    })
     onChunk({ error: error.message })
   }
 }
